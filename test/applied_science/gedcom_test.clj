@@ -1,7 +1,7 @@
-(ns gedcom.core-test
-  (:use [clojure.string :only [split-lines]])
-  (:use clojure.test)
-  (:use gedcom.core))
+(ns applied-science.gedcom-test
+  (:require [clojure.test :refer :all]
+            [applied-science.gedcom :refer :all]))
+
 
 (deftest parser
   (testing "gedcom-line"
