@@ -16,3 +16,7 @@
     (are [input expected]
          (= expected (into {} (->> input (map gedcom-line) gedcom-line-seq first)))
          ["0 FOO one" "1 CONT two" "1 CONC  three"] {:level 0 :label nil :tag "FOO" :suffix nil :data "one\ntwo three"})))
+
+
+;; TODO test from `samples`
+;; TODO find more samples to test

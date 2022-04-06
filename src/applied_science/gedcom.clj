@@ -23,46 +23,44 @@
     level tag data\\r(level+1) CONT data
     level tag data\\r(level+1) CONC data"
   [lines]
-  (lazy-seq
-   (loop [line  (first lines)
-          lines (rest  lines)]
-     (when line
-       (let [{:keys [tag data]} (first lines)]
-         (if (contains? #{"CONT" "CONC"} tag)
-           (recur (update-in line [:data] str
-                             (when (= "CONT" tag) "\n") data)
-                  (rest lines))
-           (cons line (gedcom-line-seq lines))))))))
+  (lazy-seq (loop [line  (first lines)
+                   lines (rest  lines)]
+              (when line
+                (let [{:keys [tag data]} (first lines)]
+                  (if (contains? #{"CONT" "CONC"} tag)
+                    (recur (update-in line [:data] str
+                                      (when (= "CONT" tag) "\n") data)
+                           (rest lines))
+                    (cons line (gedcom-line-seq lines))))))))
 
 
 (defn level< [& args]
   (apply < (map :level args)))
 
 
-(defn parse-gedcom-record
+(defn parse-record
   "Recursively parse a record and all its sub-records."
   [parent gedcom-lines]
   (let [line (first gedcom-lines)]
     (if (and line (level< parent line))
       (let [tail (drop-while (partial level< line) (rest gedcom-lines))]
-        (parse-gedcom-record
-         (update-in parent [(:tag line)] (fnil conj [])
-                    (parse-gedcom-record line (rest gedcom-lines)))
-         tail))
+        (parse-record (update-in parent [(:tag line)] (fnil conj [])
+                                 (parse-record line (rest gedcom-lines)))
+                      tail))
       parent)))
 
 
-(defn gedcom-record-seq
+(defn record-seq
   "Parse a GEDCOM record from a sequence returning a lazy-seq of hashes."
   [gedcom-lines]
   (lazy-seq (if (seq (rest gedcom-lines))
               (let [[head tail] (split-with (comp pos? :level) (rest gedcom-lines))]
-                (cons (parse-gedcom-record (first gedcom-lines) head)
-                      (gedcom-record-seq tail)))
+                (cons (parse-record (first gedcom-lines) head)
+                      (record-seq tail)))
               (take 1 gedcom-lines))))
 
 
-(defn gedcom-reader
+(defn reader
   "Takes an encoding (from the CHAR tag) and returns a reader
    that reads the GEDCOM file in the proper encoding."
   [encoding in]
@@ -79,38 +77,38 @@
       (io/reader in))))
 
 
-(defn ^:private parse-gedcom-records*
+(defn ^:private parse-records*
   "Parses GEDCOM records from a file or reader, returning a seq of records.
    Takes an optional encoding."
   [in & [encoding]]
   (->> in
        io/input-stream
        BOMInputStream.
-       (gedcom-reader encoding)
+       (reader encoding)
        line-seq
        (map gedcom-line)
        gedcom-line-seq
-       gedcom-record-seq))
+       record-seq))
 
 
-(defn parse-gedcom-records
+(defn parse-records
   "Parses GEDCOM record from a file or reader, returning a seq of records."
   [in]
-  (let [records (parse-gedcom-records* in)
+  (let [records (parse-records* in)
         head (first records)]
     (if-let [encoding (and (= "HEAD" (:tag head))
                            (-> head (get "CHAR") first :data))]
-      (parse-gedcom-records* in encoding)
+      (parse-records* in encoding)
       records)))
 
 
-(defn parse-gedcom
+(defn parse
   "Parses GEDCOM records from a file or reader, returning map of labels to records."
   ([in]
-   (parse-gedcom in identity))
+   (parse in identity))
   ([in post-process]
    (reduce (fn [records record]
              (assoc records (or (:label record) (:tag record))
                     (post-process record)))
            {}
-           (parse-gedcom-records in))))
+           (parse-records in))))
