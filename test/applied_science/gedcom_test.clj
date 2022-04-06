@@ -14,8 +14,8 @@
 
   (testing "gedcom-line-seq"
     (are [input expected]
-         (= expected (into {} (->> input (map gedcom-line) gedcom-line-seq first)))
-         ["0 FOO one" "1 CONT two" "1 CONC  three"] {:level 0 :tag "FOO" :data "one\ntwo three"})))
+        (= expected (into {} (->> input (map gedcom-line) gedcom-line-seq first)))
+      ["0 FOO one" "1 CONT two" "1 CONC  three"] {:level 0 :tag "FOO" :data "one\ntwo three"})))
 
 
 
@@ -120,8 +120,42 @@
 
 (deftest sample-REMARR
   (testing "Remarriage Example GEDCOM File"
-    ;; TODO samples/SSMARR.GED
-    ))
+    (let [[indi1
+           indi2
+           indi3
+           marriage-1+2
+           marriage-2+3
+           remarriage-1+2] (->> (parse-records "samples/REMARR.GED")
+                                (drop 2)
+                                (butlast))]
+      (is (= "@I1@" (:label indi1)))
+      (is (= "@I2@" (:label indi2)))
+      (is (= "@I3@" (:label indi3)))
+      (is (= (:label indi1)
+             (-> (get marriage-1+2 "HUSB") first :data)))
+      (is (= (:label indi2)
+             (-> (get marriage-1+2 "WIFE") first :data)))
+      (is (some? (get marriage-1+2 "DIV")))
+      
+      (is (= (:label indi2)
+             (-> (get marriage-2+3 "WIFE") first :data)))
+      (is (= (:label indi3)
+             (-> (get marriage-2+3 "HUSB") first :data)))
+      (is (some? (get marriage-2+3 "DIV")))
+      
+      (is (= (:label indi1)
+             (-> (get remarriage-1+2 "HUSB") first :data)))
+      (is (= (:label indi2)
+             (-> (get remarriage-1+2 "WIFE") first :data)))
+      (is (= (-> (get marriage-1+2 "MARR") first
+                 (get "PLAC") first :data)
+             (-> (get remarriage-1+2 "MARR") first
+                 (get "PLAC") first :data)))
+      (is (not= (-> (get marriage-1+2 "MARR") first
+                    (get "DATE") first :data)
+                (-> (get remarriage-1+2 "MARR") first
+                    (get "DATE") first :data)))
+      (is (nil? (get remarriage-1+2 "DIV"))))))
 
 
 (deftest sample-5.5.5-spec
