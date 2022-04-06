@@ -4,15 +4,16 @@
            java.io.InputStreamReader))
 
 
-(defrecord GedcomLine [level label tag data suffix])
-
-
 (defn gedcom-line
   "Parse a GedcomLine record from a string."
   [line]
   (when (seq line)
     (let [[_ level label tag suffix data] (re-matches #"(?s)\s*(\d)(?:\s(@[^@]+@))?\s(\w+?)(?:__(\w+))?(?:\s(.*))?" line)]
-      (GedcomLine. (Integer. level) label tag data suffix))))
+      (cond-> {:level (Integer. level)}
+        label  (assoc :label  label)
+        tag    (assoc :tag    tag)
+        data   (assoc :data   data)
+        suffix (assoc :suffix suffix)))))
 
 
 (defn gedcom-line-seq
