@@ -104,7 +104,7 @@
 
 
 (defn parse
-  "Parses GEDCOM records from a file or reader, returning map of labels to records."
+  "Parses GEDCOM records from a file or reader, returning map of labels/tags to records."
   ([in]
    (parse in identity))
   ([in post-process]
